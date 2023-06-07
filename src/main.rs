@@ -2,6 +2,7 @@ use std::io;
 use std::io::Write;
 
 pub mod meta_commands;
+pub mod tokenizer;
 
 fn main() -> io::Result<()> {
 
@@ -26,7 +27,10 @@ fn main() -> io::Result<()> {
                 Err(err) => println!("Error: {}", err)
             };
         } else {
-            // exec_sql_command(command)
+            // all other input we assume is SQL
+            for token in tokenizer::tokenize(user_input) {
+                println!("{}", token);
+            }
         }
     }
 }
