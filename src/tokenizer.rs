@@ -18,9 +18,13 @@ pub enum Keyword {
     Group,
     Sort,
     By,
+    And,
+    Or,
 }
 
 pub enum Token {
+    Whitespace,
+
     // could be column or table or db
     Entity(String),
 
@@ -38,12 +42,7 @@ pub enum Token {
     GreaterThanOrEqual,
     LessThan,
     LessThanOrEqual,
-    And,
-    Or,
     Wildcard, // the * in `select * from table`
-
-    // whitespace
-    Whitespace,
 
     // delimiters
     Comma,
@@ -79,40 +78,92 @@ pub fn tokenize(query_str: &str) -> Vec<Token> {
             }
         };
         let next_token: Token = match c {
-            ' ' | '\n' | '\t' => Token::Whitespace,
+            // coalesce whitespace chars into a single token
+            ' ' | '\n' | '\t' => {
+                loop {
+                    match query_chars.peek() {
+                        Some(' ' | '\n' | '\t') => { let _ = query_chars.next(); },
+                        Some(_) => break,
+                        None => break
+                    };
+                }
+                Token::Whitespace
+            },
 
             'a'..='z' | 'A'..='Z' | '_' => {
                 let mut word = c.to_string();
                 loop {
                     match query_chars.peek() {
                         Some('_' | 'a'..='z' | 'A'..='Z') => {
-                            word.push(query_chars.next().unwrap());
+                            let ch = query_chars.next().unwrap_or_default();
+                            word.push(ch);
                         },
                         Some(_) => break,
                         None => break,
                     }
                 }
 
-                match word.as_str() {
-                    "Select" => Token::Keyword(Keyword::Select),
-                    "From" => Token::Keyword(Keyword::From),
-                    "Insert" => Token::Keyword(Keyword::Insert),
-                    "Create" => Token::Keyword(Keyword::Create),
-                    "Delete" => Token::Keyword(Keyword::Delete),
-                    "Drop" => Token::Keyword(Keyword::Drop),
-                    "Join" => Token::Keyword(Keyword::Join),
-                    "Inner" => Token::Keyword(Keyword::Inner),
-                    "Outer" => Token::Keyword(Keyword::Outer),
-                    "Left" => Token::Keyword(Keyword::Left),
-                    "Right" => Token::Keyword(Keyword::Right),
-                    "Where" => Token::Keyword(Keyword::Where),
-                    "Having" => Token::Keyword(Keyword::Having),
-                    "Group" => Token::Keyword(Keyword::Group),
-                    "Sort" => Token::Keyword(Keyword::Sort),
-                    "By" => Token::Keyword(Keyword::By),
+                // this should maybe be a method on the Token or Keyword enum ---
+                match word.to_lowercase().as_str() {
+                    "select" => Token::Keyword(Keyword::Select),
+                    "from" => Token::Keyword(Keyword::From),
+                    "insert" => Token::Keyword(Keyword::Insert),
+                    "create" => Token::Keyword(Keyword::Create),
+                    "delete" => Token::Keyword(Keyword::Delete),
+                    "drop" => Token::Keyword(Keyword::Drop),
+                    "join" => Token::Keyword(Keyword::Join),
+                    "inner" => Token::Keyword(Keyword::Inner),
+                    "outer" => Token::Keyword(Keyword::Outer),
+                    "left" => Token::Keyword(Keyword::Left),
+                    "right" => Token::Keyword(Keyword::Right),
+                    "where" => Token::Keyword(Keyword::Where),
+                    "having" => Token::Keyword(Keyword::Having),
+                    "group" => Token::Keyword(Keyword::Group),
+                    "sort" => Token::Keyword(Keyword::Sort),
+                    "by" => Token::Keyword(Keyword::By),
+                    "and" => Token::Keyword(Keyword::And),
+                    "or" => Token::Keyword(Keyword::Or),
                     _ => Token::Entity(word),
                 }
             },
+            '+' => Token::Plus,
+            '-' => Token::Minus,
+            '*' => {
+                // figure out if multiply or select wildcard
+                Token::Multiply
+            },
+            '/' => Token::Divide,
+            '%' => Token::Modulo,
+            '=' => {
+                match query_chars.peek() {
+                    Some('=') => {
+                        let _ = query_chars.next();
+                        Token::DoubleEquality
+                    },
+                    Some(_) => Token::Equality,
+                    None => Token::Equality
+                }
+            },
+            '>' => {
+                match query_chars.peek() {
+                    Some('=') => {
+                        let _ = query_chars.next();
+                        Token::GreaterThanOrEqual
+                    }
+                    Some(_) => Token::GreaterThan,
+                    None => Token::GreaterThan
+                }
+            },
+            '<' => {
+                match query_chars.peek() {
+                    Some('=') => {
+                        let _ = query_chars.next();
+                        Token::LessThanOrEqual
+                    }
+                    Some(_) => Token::LessThan,
+                    None => Token::LessThan
+                }
+            }
             _ => Token::Invalid
 
         };
@@ -140,6 +191,8 @@ impl fmt::Display for Keyword {
             Keyword::Group => "Group",
             Keyword::Sort => "Sort",
             Keyword::By => "By",
+            Keyword::And => "And",
+            Keyword::Or => "Or"
         };
 
         write!(f, "Token({})", repr)
@@ -162,8 +215,6 @@ impl fmt::Display for Token {
             Token::GreaterThanOrEqual => "GreaterThanOrEqual".to_owned(),
             Token::LessThan => "LessThan".to_owned(),
             Token::LessThanOrEqual => "LessThanOrEqual".to_owned(),
-            Token::And => "And".to_owned(),
-            Token::Or => "Or".to_owned(),
             Token::Wildcard => "Wildcard".to_owned(),
             Token::Whitespace => "Whitespace".to_owned(),
             Token::Comma => "Comma".to_owned(),
