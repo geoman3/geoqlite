@@ -49,11 +49,11 @@ pub enum Token {
     SemiColon,
 
     // strings
-    SingleQuotedString,
-    DoubleQuotedString,
+    SingleQuotedString(String),
+    DoubleQuotedString(String),
 
     // numbers
-    Number,
+    Number(String),
 
     // End of file
     Eof,
@@ -63,15 +63,19 @@ pub enum Token {
 
 
 
-// for now we will alzily implement this and return the whole 
-// token array at once
+// for now we will lazily implement this and return the whole 
+// token array at once, might be worth breaking this down to producing 1 token at a time
+// to hand off to a second thread to build the AST but Im not expecting BIG strings
 pub fn tokenize(query_str: &str) -> Vec<Token> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut query_chars = query_str.chars().peekable();
 
     loop {
+        // grab the first char of the next token
         let c = match query_chars.next() {
             Some(q_char) => q_char,
+            // if there isnt a next char, then we have read the whole string
+            // return the tokens
             None => {
                 tokens.push(Token::Eof);
                 return tokens;
@@ -94,10 +98,7 @@ pub fn tokenize(query_str: &str) -> Vec<Token> {
                 let mut word = c.to_string();
                 loop {
                     match query_chars.peek() {
-                        Some('_' | 'a'..='z' | 'A'..='Z') => {
-                            let ch = query_chars.next().unwrap_or_default();
-                            word.push(ch);
-                        },
+                        Some('_' | 'a'..='z' | 'A'..='Z') => word.push(query_chars.next().unwrap_or_default()),
                         Some(_) => break,
                         None => break,
                     }
@@ -163,6 +164,47 @@ pub fn tokenize(query_str: &str) -> Vec<Token> {
                     Some(_) => Token::LessThan,
                     None => Token::LessThan
                 }
+            },
+            ',' => Token::Comma,
+            ';' => Token::SemiColon,
+            '"' => {
+                let mut word = c.to_string();
+                loop {
+                    match query_chars.peek() {
+                        Some('"') => {
+                            word.push(query_chars.next().unwrap_or_default());
+                            break;
+                        }
+                        Some(_) => word.push(query_chars.next().unwrap_or_default()),
+                        None => break,
+                    }
+                }
+                Token::DoubleQuotedString(word)
+            },
+            '\'' => {
+                let mut word = c.to_string();
+                loop {
+                    match query_chars.peek() {
+                        Some('\'') => {
+                            word.push(query_chars.next().unwrap_or_default());
+                            break;
+                        }
+                        Some(_) => word.push(query_chars.next().unwrap_or_default()),
+                        None => break,
+                    }
+                }
+                Token::SingleQuotedString(word)
+            },
+            '0'..='9' | '.' => {
+                let mut num_string = c.to_string();
+                loop {
+                    match query_chars.peek() {
+                        Some('0'..='9' | '.' ) => num_string.push(query_chars.next().unwrap_or_default()),
+                        Some(_) => break,
+                        None => break,
+                    }
+                }
+                Token::Number(num_string)
             }
             _ => Token::Invalid
 
@@ -219,9 +261,9 @@ impl fmt::Display for Token {
             Token::Whitespace => "Whitespace".to_owned(),
             Token::Comma => "Comma".to_owned(),
             Token::SemiColon => "SemiColon".to_owned(),
-            Token::SingleQuotedString => "SingleQuotedString".to_owned(),
-            Token::DoubleQuotedString => "DoubleQuotedString".to_owned(),
-            Token::Number => "Number".to_owned(),
+            Token::SingleQuotedString(s) => format!("SingleQuotedString: \"{s}\""),
+            Token::DoubleQuotedString(s) => format!("DoubleQuotedString: \"{s}\""),
+            Token::Number(s) => format!("Number: \"{s}\""),
             Token::Eof => "Eof".to_owned(),
             Token::Invalid => "Invalid".to_owned(),
         };
