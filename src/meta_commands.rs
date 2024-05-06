@@ -31,12 +31,12 @@ pub fn exec_meta_command(command: MetaCommand) -> Result<&'static str, &'static 
         },
         MetaCommand::Help(_) => {
             let message = r#"
-            available commands:
-            .exit            => quits the program
-            .help            => displays this message
-            .open <FILENAME> => opens a new database from FILENAME
-            .save <FILENAME> => saves current in memory database to FILENAME
-            .tables          => lists available tables
+available commands:
+.exit            => quits the program
+.help            => displays this message
+.open <FILENAME> => opens a new database from FILENAME
+.save <FILENAME> => saves current in memory database to FILENAME
+.tables          => lists available tables
             "#;
             Ok(message)
         },

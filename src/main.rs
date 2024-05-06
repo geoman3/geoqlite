@@ -9,7 +9,7 @@ pub mod ast;
 fn main() -> io::Result<()> {
 
     println!(r#"Welcome to gql! a rusty version of sqlite
-    type .help to see a list of commands"#);
+type .help to see a list of commands"#);
 
     loop {
         // Basic REPL loop
