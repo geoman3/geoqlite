@@ -3,6 +3,8 @@ use std::io::Write;
 
 pub mod meta_commands;
 pub mod tokenizer;
+pub mod parser;
+pub mod ast;
 
 fn main() -> io::Result<()> {
 
