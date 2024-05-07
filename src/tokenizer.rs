@@ -1,4 +1,4 @@
-use std::{fmt, collections::VecDeque};
+use std::fmt;
 
 // start with the basics
 pub enum Keyword {
