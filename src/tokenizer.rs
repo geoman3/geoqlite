@@ -1,4 +1,5 @@
 use std::fmt;
+use std::iter::Peekable;
 
 // start with the basics
 pub enum Keyword {
@@ -66,7 +67,7 @@ pub enum Token {
 // for now we will lazily implement this and return the whole 
 // token array at once, might be worth breaking this down to producing 1 token at a time
 // to hand off to a second thread to build the AST but Im not expecting BIG strings
-pub fn tokenize(query_str: &str) -> Vec<Token> {
+pub fn tokenize(query_str: &str) -> TokenCollection {
     let mut tokens: Vec<Token> = Vec::new();
     let mut query_chars = query_str.chars().peekable();
 
@@ -78,7 +79,7 @@ pub fn tokenize(query_str: &str) -> Vec<Token> {
             // return the tokens
             None => {
                 tokens.push(Token::Eof);
-                return tokens;
+                return TokenCollection::new(tokens);
             }
         };
         let next_token: Token = match c {
@@ -269,5 +270,42 @@ impl fmt::Display for Token {
         };
         
         write!(f, "Token({})", repr)
+    }
+}
+
+
+pub struct TokenCollection {
+    // idk if I actually want this public
+    tokens: Peekable<std::vec::IntoIter<Token>>
+}
+
+impl TokenCollection {
+    pub fn new(tokens: Vec<Token>) -> Self {
+        TokenCollection { tokens: tokens.into_iter().peekable() }
+    }
+
+    // gets the next non-whitespace token
+    pub fn next_token(&mut self) -> Token {
+        loop {
+            match self.tokens.next() {
+                Some(Token::Whitespace) => continue,
+                Some(token) => token,
+                None => Token::Eof
+            };
+        }
+    }
+
+    // peeks the next non-whitespace token
+    pub fn peek_token(&mut self) -> &Token {
+        loop {
+            match self.tokens.peek() {
+                Some(Token::Whitespace) => {
+                    let _ = self.tokens.next();
+                    continue;
+                },
+                Some(token) => token,
+                None => &Token::Eof
+            };
+        }
     }
 }

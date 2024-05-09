@@ -1,7 +1,22 @@
+use crate::tokenizer::{Keyword, Token, TokenCollection};
+
 pub struct Query {
     statements: Vec<Statement>
 }
 
+impl Query {
+    pub fn new(tokens: &mut TokenCollection) -> Self {
+        let mut statements: Vec<Statement> = Vec::new();
+        loop {
+            let next_statement: Statement = match tokens.next_token() {
+               Token::Keyword(Keyword::Select) => Statement::Select(SelectStatement::new(tokens)),
+               _ => break
+            };
+            statements.push(next_statement)
+        }
+        Query{ statements: statements }
+    }
+}
 
 pub enum Statement {
     Select(SelectStatement),
@@ -14,6 +29,13 @@ pub struct SelectStatement {
     select_clause: SelectClause,
     from_clause: Option<Box<FromClause>>,
     where_clause: Option<WhereClause>
+}
+
+impl SelectStatement {
+    pub fn new(tokens: &mut TokenCollection) -> Self {
+        // handle select clause
+        let select_clause = SelectClause::new
+    }
 }
 
 pub struct InsertStatement {
@@ -39,6 +61,19 @@ pub enum Clauses {
 pub struct SelectClause {
     distinct: bool,
     columns: Vec<ColumnExpression>
+}
+
+impl SelectClause {
+    pub fn new(tokens: &mut TokenCollection) -> Self {
+        let mut columns: Vec<ColumnExpression> = Vec::new();
+        loop {
+            let next_column: ColumnExpression = match tokens.next_token() {
+                Token::Comma => continue,
+                
+                _ => 
+            };
+        }
+    }
 }
 
 pub struct FromClause {
@@ -70,7 +105,8 @@ pub enum TableExpression {
 pub enum ColumnExpression {
     ColumnReference(String), // I think just using a string here should be fine
     Alias(AliasExpression),
-    SqlFunction(SqlFunction)
+    SqlFunction(SqlFunction),
+    Wildcard
 }
 
 pub struct AliasExpression {
