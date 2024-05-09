@@ -1,46 +1,83 @@
-pub struct Statement {
+pub struct Query {
+    statements: Vec<Statement>
+}
+
+
+pub enum Statement {
+    Select(SelectStatement),
+    Insert(InsertStatement),
+    Update(UpdateStatement),
+    Delete(DeleteStatement)
+}
+
+pub struct SelectStatement {
+    select_clause: SelectClause,
+    from_clause: Option<Box<FromClause>>,
+    where_clause: Option<WhereClause>
+}
+
+pub struct InsertStatement {
 
 }
 
-// holds all information we need to run a select statement
-pub struct Select {
-    pub select: Vec<Expression>,
-    pub from: TableExpression
-}
-
-pub struct Create {
-    pub table_name: String,
-    pub columns: Vec<ColumnDefinition>
-}
-
-pub struct Insert {
-    pub table_name: String,
-    pub columns: Vec<String>,
-    pub values: Vec<SqlValue>
-}
-
-pub struct Delete {
-    // which table to delete from
-    pub table_name: String,
-    // condition which decides if we delete the row or not
-    pub condition: Expression
-}
-// represents some operation that is evaluated in the context of a select item or a where clause
-// eg. SELECT [expression1] FROM [table] WHERE [expression2]
-pub struct Expression {
+pub struct UpdateStatement {
 
 }
 
-pub struct TableExpression {
+pub struct DeleteStatement {
 
 }
 
-pub struct ColumnDefinition {
-
+pub enum Clauses {
+    Select(SelectClause),
+    From(FromClause),
+    Where(WhereClause)
+    // GroupBy, Having etc ... we'll start with just these select,from,where for now
+    // should probably implement joins at some point
 }
 
-pub enum SqlValue {
-    SqlNumber(f64),
-    SqlString(String),
-    SqlBoolean(bool)
+pub struct SelectClause {
+    distinct: bool,
+    columns: Vec<ColumnExpression>
+}
+
+pub struct FromClause {
+    table: TableExpression
+}
+
+pub struct WhereClause {
+    boolean_expression: BooleanExpression
+}
+
+pub enum BooleanExpression {
+    And(Box<BinaryOperation>),
+    Or(Box<BinaryOperation>),
+    GreaterThan(Box<BinaryOperation>),
+    LessThan(Box<BooleanExpression>),
+    Value(bool)
+}
+
+pub struct BinaryOperation {
+    left_hand_side: BooleanExpression,
+    right_hand_side: BooleanExpression
+}
+
+pub enum TableExpression {
+    TableReference(String),
+    SelectStatement(SelectStatement)
+}
+
+pub enum ColumnExpression {
+    ColumnReference(String), // I think just using a string here should be fine
+    Alias(AliasExpression),
+    SqlFunction(SqlFunction)
+}
+
+pub struct AliasExpression {
+    alias: String,
+    column_expression: Box<ColumnExpression>
+}
+
+pub struct SqlFunction {
+
 }

@@ -27,15 +27,3 @@ use crate::tokenizer::{Token};
         
 //     }
 // }
-
-pub struct Parser {
-    tokens: dyn Iterator<Item = Token>
-}
-
-impl Parser {
-    pub fn new(tokens: Vec<Token>) -> Self {
-        Self {
-            tokens: tokens.into_iter()
-        }
-    }
-}

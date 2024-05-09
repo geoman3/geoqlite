@@ -11,3 +11,5 @@ https://medium.com/the-polyglot-programmer/what-would-sqlite-look-like-if-writte
 https://docs.rs/crate/sqlparser/latest/source/src/ast/query.rs
 
 https://doc.rust-lang.org/src/alloc/collections/btree/map.rs.html#172-176
+
+https://astexplorer.net/
