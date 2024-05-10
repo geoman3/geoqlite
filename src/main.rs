@@ -1,8 +1,6 @@
 use std::io;
 use std::io::Write;
 
-use crate::tokenizer::Token;
-
 pub mod meta_commands;
 pub mod tokenizer;
 pub mod parser;
@@ -33,7 +31,7 @@ type .help to see a list of commands"#);
         } else {
             // all other input we assume is SQL
             let tree = parser::parse_statement(user_input);
-            println!("{}", tree);
+            println!("{:?}", tree);
         }
     }
 }

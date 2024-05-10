@@ -1,5 +1,6 @@
 use std::fmt;
 use std::iter::Peekable;
+use std::slice::Windows;
 
 // start with the basics
 pub enum Keyword {
@@ -276,36 +277,38 @@ impl fmt::Display for Token {
 
 pub struct TokenCollection {
     // idk if I actually want this public
-    tokens: Peekable<std::vec::IntoIter<Token>>
+    tokens: Vec<Token>
 }
 
 impl TokenCollection {
     pub fn new(tokens: Vec<Token>) -> Self {
-        TokenCollection { tokens: tokens.into_iter().peekable() }
+        TokenCollection { tokens: tokens }
     }
 
     // gets the next non-whitespace token
     pub fn next_token(&mut self) -> Token {
         loop {
-            match self.tokens.next() {
+            let return_token = match self.tokens.pop() {
                 Some(Token::Whitespace) => continue,
                 Some(token) => token,
                 None => Token::Eof
             };
+            println!("{}", return_token);
+            return return_token;
         }
     }
 
     // peeks the next non-whitespace token
     pub fn peek_token(&mut self) -> &Token {
+        self.tokens.windows(1).next().unwrap()
         loop {
-            match self.tokens.peek() {
+            match self.tokens.windows(1).next().unwrap() {
                 Some(Token::Whitespace) => {
-                    let _ = self.tokens.next();
+                    let _ = self.next_token();
                     continue;
-                },
-                Some(token) => token,
-                None => &Token::Eof
-            };
+                }
+                Some(token) => return token
+            }
         }
     }
 }
