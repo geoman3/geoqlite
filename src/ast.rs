@@ -11,7 +11,10 @@ impl Query {
         let mut statements: Vec<Statement> = Vec::new();
         loop {
             let next_statement: Statement = match tokens.next_token() {
-               Token::Keyword(Keyword::Select) => Statement::Select(SelectStatement::new(tokens)),
+               Token::Keyword(Keyword::Select) => {
+                    println!("I matched the select keyword!");
+                    Statement::Select(SelectStatement::new(tokens))
+                },
                _ => break
             };
             statements.push(next_statement)
@@ -39,9 +42,10 @@ impl SelectStatement {
     pub fn new(tokens: &mut TokenCollection) -> Self {
         // handle select clause
         let select_clause = SelectClause::new(tokens);
+        let from_clause = FromClause::new(tokens);
         SelectStatement{
             select_clause: select_clause,
-            from_clause: None,
+            from_clause: Some(Box::new(from_clause)),
             where_clause: None
         }
     }
@@ -81,10 +85,15 @@ impl SelectClause {
     pub fn new(tokens: &mut TokenCollection) -> Self {
         let mut columns: Vec<ColumnExpression> = Vec::new();
         loop {
-            println!("in the select clause::new loop");
-            let next_column = match tokens.next_token() {
-                Token::Comma => continue,
-                Token::Keyword(Keyword::From) => break,
+            let next_column = match tokens.peek_token() {
+                Token::Comma => {
+                    let _ = tokens.next_token();
+                    continue;
+                },
+                Token::Keyword(Keyword::From) => {
+                    let _ = tokens.next_token();
+                    break
+                },
                 _ => ColumnExpression::new(tokens)
             };
             columns.push(next_column);
@@ -101,8 +110,11 @@ pub struct FromClause {
 impl FromClause {
     pub fn new(tokens: &mut TokenCollection) -> Self {
         let expression = match tokens.next_token() {
-            Token::Entity()
-        }
+            Token::Entity(ref_name) => TableExpression::TableReference(ref_name),
+            Token::OpenParentheses => TableExpression::SelectStatement(SelectStatement::new(tokens)),
+            tok => panic!("unexpect token: {:?}", tok)
+        };
+        return FromClause{ table: expression };
     }
 }
 
@@ -142,10 +154,8 @@ pub enum ColumnExpression {
 
 impl ColumnExpression {
     pub fn new(tokens: &mut TokenCollection) -> Self {
-        println!("Inside col expression new");
         let col = match tokens.peek_token() {
             Token::Multiply => {
-                println!("inside match");
                 let _ = tokens.next_token();
                 ColumnExpression::Wildcard
             },
@@ -154,7 +164,7 @@ impl ColumnExpression {
                 ColumnExpression::ColumnReference(name.to_string())
             },
             // TODO: Implement alias expressions, ie. select foo as bar from baz
-            token => panic!("unexpected token: {}", token)
+            token => panic!("unexpected token: {:?}", token)
         };
         return col;
     }

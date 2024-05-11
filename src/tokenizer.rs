@@ -1,8 +1,8 @@
 use std::fmt;
-use std::iter::Peekable;
-use std::slice::Windows;
+use std::collections::VecDeque;
 
-// start with the basics
+
+#[derive(Debug, Clone, Copy)]
 pub enum Keyword {
     Select,
     From,
@@ -24,6 +24,7 @@ pub enum Keyword {
     Or,
 }
 
+#[derive(Debug, Clone)]
 pub enum Token {
     Whitespace,
 
@@ -57,6 +58,10 @@ pub enum Token {
     // numbers
     Number(String),
 
+    // et al.
+    OpenParentheses,
+    CloseParentheses,
+
     // End of file
     Eof,
 
@@ -69,7 +74,7 @@ pub enum Token {
 // token array at once, might be worth breaking this down to producing 1 token at a time
 // to hand off to a second thread to build the AST but Im not expecting BIG strings
 pub fn tokenize(query_str: &str) -> TokenCollection {
-    let mut tokens: Vec<Token> = Vec::new();
+    let mut tokens: VecDeque<Token> = VecDeque::new();
     let mut query_chars = query_str.chars().peekable();
 
     loop {
@@ -79,7 +84,7 @@ pub fn tokenize(query_str: &str) -> TokenCollection {
             // if there isnt a next char, then we have read the whole string
             // return the tokens
             None => {
-                tokens.push(Token::Eof);
+                tokens.push_back(Token::Eof);
                 return TokenCollection::new(tokens);
             }
         };
@@ -135,6 +140,8 @@ pub fn tokenize(query_str: &str) -> TokenCollection {
                 // figure out if multiply or select wildcard
                 Token::Multiply
             },
+            '(' => Token::OpenParentheses,
+            ')' => Token::CloseParentheses,
             '/' => Token::Divide,
             '%' => Token::Modulo,
             '=' => {
@@ -212,7 +219,7 @@ pub fn tokenize(query_str: &str) -> TokenCollection {
 
         };
 
-        tokens.push(next_token);
+        tokens.push_back(next_token);
     }
 }
 
@@ -243,71 +250,41 @@ impl fmt::Display for Keyword {
     }
 }
 
-impl fmt::Display for Token {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let repr = match self {
-            Token::Entity(s) => format!("Entity: \"{s}\""),
-            Token::Keyword(kw) => format!("Keyword{kw}"),
-            Token::Plus => "Plus".to_owned(),
-            Token::Minus => "Minus".to_owned(),
-            Token::Multiply => "Multiply".to_owned(),
-            Token::Divide => "Divide".to_owned(),
-            Token::Modulo => "Modulo".to_owned(),
-            Token::Equality => "Equality".to_owned(),
-            Token::DoubleEquality => "DoubleEquality".to_owned(),
-            Token::GreaterThan => "GreaterThan".to_owned(),
-            Token::GreaterThanOrEqual => "GreaterThanOrEqual".to_owned(),
-            Token::LessThan => "LessThan".to_owned(),
-            Token::LessThanOrEqual => "LessThanOrEqual".to_owned(),
-            Token::Wildcard => "Wildcard".to_owned(),
-            Token::Whitespace => "Whitespace".to_owned(),
-            Token::Comma => "Comma".to_owned(),
-            Token::SemiColon => "SemiColon".to_owned(),
-            Token::SingleQuotedString(s) => format!("SingleQuotedString: \"{s}\""),
-            Token::DoubleQuotedString(s) => format!("DoubleQuotedString: \"{s}\""),
-            Token::Number(s) => format!("Number: \"{s}\""),
-            Token::Eof => "Eof".to_owned(),
-            Token::Invalid => "Invalid".to_owned(),
-        };
-        
-        write!(f, "Token({})", repr)
-    }
-}
-
 
 pub struct TokenCollection {
     // idk if I actually want this public
-    tokens: Vec<Token>
+    tokens: VecDeque<Token>
 }
 
 impl TokenCollection {
-    pub fn new(tokens: Vec<Token>) -> Self {
+    pub fn new(tokens: VecDeque<Token>) -> Self {
+        println!("here are the tokens: {:?}", tokens);
         TokenCollection { tokens: tokens }
     }
 
     // gets the next non-whitespace token
     pub fn next_token(&mut self) -> Token {
         loop {
-            let return_token = match self.tokens.pop() {
+            let return_token = match self.tokens.pop_front() {
                 Some(Token::Whitespace) => continue,
                 Some(token) => token,
                 None => Token::Eof
             };
-            println!("{}", return_token);
+            println!("{:?}", return_token);
             return return_token;
         }
     }
 
-    // peeks the next non-whitespace token
-    pub fn peek_token(&mut self) -> &Token {
-        self.tokens.windows(1).next().unwrap()
+    // "peeks" the next non-whitespace token
+    pub fn peek_token(&mut self) -> Token {
         loop {
-            match self.tokens.windows(1).next().unwrap() {
-                Some(Token::Whitespace) => {
-                    let _ = self.next_token();
-                    continue;
-                }
-                Some(token) => return token
+            match self.tokens.pop_front() {
+                Some(Token::Whitespace) => continue,
+                Some(token) => {
+                    self.tokens.push_front(token.clone());
+                    return token;
+                },
+                None => return Token::Eof
             }
         }
     }
